@@ -1,2 +1,9 @@
 streamlit
+requests
+pandas
+matplotlib
+matplotlib.pyplot
+seaborn
+matplotlib.dates
+yfinance
 numpy
