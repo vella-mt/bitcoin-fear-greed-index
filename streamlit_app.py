@@ -41,12 +41,12 @@ st.markdown("- **Fear**: 26-46")
 st.markdown("- **Extreme Fear**: 1-25")
 
 
-num_days = st.slider('Number of Days to Analyze', 30, len(data), 750)
+num_days = st.slider('Number of Days to Analyze', 30, len(data), 825)
 
 buy_threshold = st.slider('Buy Below Index', 0, 100, 25)
 sell_threshold = st.slider('Sell Above Index', 0, 100, 76)
 initial_balance = st.number_input('Start Balance (USD)', value=1000, step=1000)
-trade_amount = st.number_input('Trade Amount (USD)', value=50, step=10)
+trade_amount = st.number_input('Trade Amount (USD)', value=10, step=50)
 
 data = data.tail(num_days).reset_index(drop=True)
 
