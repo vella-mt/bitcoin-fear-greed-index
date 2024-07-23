@@ -7,28 +7,37 @@ import matplotlib.dates as mdates
 import yfinance as yf
 import numpy as np
 
-# Fetch Fear and Greed Index data
-r = requests.get('https://api.alternative.me/fng/?limit=0')
-df = pd.DataFrame(r.json()['data'])
-df['value'] = df['value'].astype(int)
-df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-df.set_index('timestamp', inplace=True)
-df.rename(columns={'value': 'fear_greed'}, inplace=True)
-df.drop(['time_until_update'], axis=1, inplace=True)
 
-# Fetch Bitcoin data history
-df1 = yf.download('BTC-USD', interval='1d')[['Close']]
-df1.rename(columns={'Close': 'close'}, inplace=True)
-df1.index.name = 'timestamp'
-df1['timestamp'] = df1.index
-df1.reset_index(drop=True, inplace=True)
-df1['timestamp'] = pd.to_datetime(df1['timestamp']).dt.tz_localize(None)
-df1.set_index('timestamp', inplace=True)
+def getData(tailDays=0):
+    # Fetch Fear and Greed Index data
+    r = requests.get('https://api.alternative.me/fng/?limit=0')
+    df = pd.DataFrame(r.json()['data'])
+    df['value'] = df['value'].astype(int)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    df.set_index('timestamp', inplace=True)
+    df.rename(columns={'value': 'fear_greed'}, inplace=True)
+    df.drop(['time_until_update'], axis=1, inplace=True)
 
-# Merge the two dataframes
-data = df.merge(df1, on='timestamp')
-data.sort_index(inplace=True)
-data.reset_index(inplace=True)
+    # Fetch Bitcoin data history
+    df1 = yf.download('BTC-USD', interval='1d')[['Close']]
+    df1.rename(columns={'Close': 'close'}, inplace=True)
+    df1.index.name = 'timestamp'
+    df1['timestamp'] = df1.index
+    df1.reset_index(drop=True, inplace=True)
+    df1['timestamp'] = pd.to_datetime(df1['timestamp']).dt.tz_localize(None)
+    df1.set_index('timestamp', inplace=True)
+
+    # Merge the two dataframes
+    data = df.merge(df1, on='timestamp')
+    data.sort_index(inplace=True)
+    data.reset_index(inplace=True)
+
+    if tailDays > 0:
+        data = data.tail(tailDays).reset_index(drop=True)
+
+    return data
+
+data = getData()
 
 # Streamlit UI
 st.title('Bitcoin Trading based on Fear and Greed Index Strategy Simulator')
@@ -39,7 +48,6 @@ st.markdown("- **Greed**: 55-75")
 st.markdown("- **Neutral**: 47-54")
 st.markdown("- **Fear**: 26-46")
 st.markdown("- **Extreme Fear**: 1-25")
-
 
 num_days = st.slider('Number of Days to Analyze', 30, len(data), 825)
 
@@ -127,7 +135,7 @@ def plot_strategy(data, balances, btc_values, total_values, buy_signals, sell_si
 
     return fig
 
-def plot_strategy2(data, balances, btc_values, total_values, buy_signals, sell_signals):
+def plot_buy_and_hold_comparison(data, balances, btc_values, total_values, buy_signals, sell_signals):
     fig, ax = plt.subplots(figsize=(12, 8))
 
     # Calculate the performance of a buy-and-hold strategy
@@ -199,8 +207,8 @@ def plot_strategy2(data, balances, btc_values, total_values, buy_signals, sell_s
 if st.button('Run Simulation'):
     balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(
         data, buy_threshold, sell_threshold, initial_balance, trade_amount)
-    fig = plot_strategy(data, balances, btc_values, total_values, buy_signals, sell_signals)
-    fig2 = plot_strategy2(data, balances, btc_values, total_values, buy_signals, sell_signals)
+    fig1 = plot_buy_and_hold_comparison(data, balances, btc_values, total_values, buy_signals, sell_signals)
+    fig2 = plot_strategy(data, balances, btc_values, total_values, buy_signals, sell_signals)
     
+    st.pyplot(fig1)
     st.pyplot(fig2)
-    st.pyplot(fig)
