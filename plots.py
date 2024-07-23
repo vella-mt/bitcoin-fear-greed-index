@@ -1,61 +1,9 @@
-import streamlit as st
-import requests
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 import matplotlib.dates as mdates
-import yfinance as yf
 import numpy as np
+import seaborn as sns
 
-def getData(tailDays=0):
-    # Fetch Fear and Greed Index data
-    r = requests.get('https://api.alternative.me/fng/?limit=0')
-    df = pd.DataFrame(r.json()['data'])
-    df['value'] = df['value'].astype(int)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-    df.set_index('timestamp', inplace=True)
-    df.rename(columns={'value': 'fear_greed'}, inplace=True)
-    df.drop(['time_until_update'], axis=1, inplace=True)
-
-    # Fetch Bitcoin data history
-    df1 = yf.download('BTC-USD', interval='1d')[['Close']]
-    df1.rename(columns={'Close': 'close'}, inplace=True)
-    df1.index.name = 'timestamp'
-    df1['timestamp'] = df1.index
-    df1.reset_index(drop=True, inplace=True)
-    df1['timestamp'] = pd.to_datetime(df1['timestamp']).dt.tz_localize(None)
-    df1.set_index('timestamp', inplace=True)
-
-    # Merge the two dataframes
-    data = df.merge(df1, on='timestamp')
-    data.sort_index(inplace=True)
-    data.reset_index(inplace=True)
-
-    if tailDays > 0:
-        data = data.tail(tailDays).reset_index(drop=True)
-
-    return data
-
-data = getData()
-
-# Streamlit UI
-st.title('Bitcoin Trading based on Fear and Greed Index Strategy Simulator')
-
-st.markdown("### Fear and Greed Index Value Classifications:")
-st.markdown("- **Extreme Greed**: 76-100")
-st.markdown("- **Greed**: 55-75")
-st.markdown("- **Neutral**: 47-54")
-st.markdown("- **Fear**: 26-46")
-st.markdown("- **Extreme Fear**: 1-25")
-
-num_days = st.slider('Number of Days to Analyze', 30, len(data), 825)
-
-buy_threshold = st.slider('Buy Below Index', 0, 100, 25)
-sell_threshold = st.slider('Sell Above Index', 0, 100, 76)
-initial_balance = st.number_input('Start Balance (USD)', value=1000, step=1000)
-trade_amount = st.number_input('Trade Amount (USD)', value=10, step=50)
-
-data = data.tail(num_days).reset_index(drop=True)
 
 # Define the strategy implementation function
 def implement_strategy(data, buy_threshold, sell_threshold, initial_balance, trade_amount):
@@ -203,11 +151,130 @@ def plot_buy_and_hold_comparison(data, balances, btc_values, total_values, buy_s
     plt.tight_layout()
     return fig
 
-if st.button('Run Simulation'):
-    balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(
-        data, buy_threshold, sell_threshold, initial_balance, trade_amount)
-    fig1 = plot_buy_and_hold_comparison(data, balances, btc_values, total_values, buy_signals, sell_signals)
-    fig2 = plot_strategy(data, balances, btc_values, total_values, buy_signals, sell_signals)
+def plot_btc_against_fgi(data):
+    # Create a plot with dual y-axes
+    fig, ax1 = plt.subplots(figsize=(16, 8))
+
+    # Plot BTC price on the first y-axis
+    ax1.plot(data['timestamp'], data['close'], color='tab:blue', label='BTC Price')
+    ax1.set_xlabel('Date', fontsize=12)
+    ax1.set_ylabel('BTC Price (EUR)', color='tab:blue', fontsize=12)
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    # Create a second y-axis to plot the Fear and Greed Index value
+    ax2 = ax1.twinx()
+    ax2.plot(data['timestamp'], data['fear_greed'], color='tab:orange', label='Fear and Greed Index')
+    ax2.set_ylabel('Fear and Greed Index Value', color='tab:orange', fontsize=12)
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    # Customize x-axis
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    ax1.xaxis.set_major_locator(mdates.AutoDateLocator())
+    fig.autofmt_xdate()  # Rotate and align the tick labels
+
+    # Show gridlines
+    ax1.grid(True, linestyle='--', alpha=0.3)
+
+    # Add title and legend
+    plt.title('Bitcoin Price and Fear and Greed Index Over Time', fontsize=16)
+    fig.tight_layout()  # To ensure the labels do not overlap
+    fig.legend(loc='upper left', bbox_to_anchor=(0.1, 1), fontsize=10)
+
+    return fig
+
+def plot_btc_against_fgi_classification(data):
+    ordered_classifications = [
+        ('Extreme Fear', 'red'),
+        ('Fear', 'orange'),
+        ('Neutral', 'gray'),
+        ('Greed', 'lightblue'),
+        ('Extreme Greed', 'blue')
+    ]
+
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(16, 10))
+
+    # Plot Fear/Greed Index as color-coded bars up to the Bitcoin price
+    bar_width = 0.8  # Width of each bar
+    bars = ax.bar(data['timestamp'], data['close'], width=bar_width, 
+                color=data['color'], alpha=0.6)
+
+    # Plot Bitcoin price as a line on top of the bars
+    line = ax.plot(data['timestamp'], data['close'], color='black', label='Bitcoin Price')
+
+    # Customize y-axis
+    ax.set_ylabel('Bitcoin Price (USD)', color='black')
+    ax.tick_params(axis='y', labelcolor='black')
+
+    # Customize x-axis
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    fig.autofmt_xdate()
+
+    # Set title and labels
+    plt.title('Bitcoin Price vs Fear/Greed Index Classification', fontsize=16)
+    ax.set_xlabel('Date', fontsize=12)
+
+    # Add legend for Fear/Greed Index classifications
+    legend_elements = [plt.Rectangle((0,0),1,1, facecolor=color, edgecolor='none', alpha=0.6, label=class_name) 
+                    for class_name, color in ordered_classifications]
+    legend_elements += line
+    ax.legend(handles=legend_elements, loc='upper left', title='Legend', fontsize=10)
+
+    # Show gridlines
+    ax.grid(True, linestyle='--', alpha=0.3)
+
+    # Adjust layout and display the plot
+    plt.tight_layout()
+    return fig
+
+def lag_plot_btc_against_fgi(data):
+    # Create the lag plot
+    plt.figure(figsize=(12, 8))
+    sns.scatterplot(x='fear_greed', y='next_day_close_change', data=data, alpha=0.6)
+
+    plt.title("Lag Plot: Fear/Greed Index vs Next Day's Bitcoin Price Change", fontsize=16)
+    plt.xlabel("Fear/Greed Index Value (Day t)", fontsize=12)
+    plt.ylabel("Bitcoin Price Change % (Day t+1)", fontsize=12)
+
+    # Add a horizontal line at y=0 to show the boundary between positive and negative changes
+    plt.axhline(y=0, color='r', linestyle='--', alpha=0.5)
+
+    # Add a vertical line at x=50 to show the boundary between fear and greed
+    plt.axvline(x=50, color='g', linestyle='--', alpha=0.5)
+
+    # Annotate the quadrants
+    plt.text(25, 0.05, "Fear → Price Increase", fontsize=10, ha='center')
+    plt.text(75, 0.05, "Greed → Price Increase", fontsize=10, ha='center')
+    plt.text(25, -0.05, "Fear → Price Decrease", fontsize=10, ha='center')
+    plt.text(75, -0.05, "Greed → Price Decrease", fontsize=10, ha='center')
+
+    plt.tight_layout()
+
+    return plt
+
+def lag_plot_btc_against_fgi_classification(data):
+    # Create a categorical order for the Fear/Greed Index classifications
+    category_order = ['Extreme Fear', 'Fear', 'Neutral', 'Greed', 'Extreme Greed']
+
+    # Ensure 'value_classification' is treated as a category with the specified order
+    data['value_classification'] = pd.Categorical(data['value_classification'], categories=category_order, ordered=True)
+
+    # Create the lag plot
+    plt.figure(figsize=(14, 8))
+    sns.boxplot(x='value_classification', y='next_day_close_change', data=data, 
+                order=category_order, palette='RdYlGn')
+
+    plt.title("Lag Plot: Fear/Greed Index Classification vs Next Day's Bitcoin Price Change", fontsize=16)
+    plt.xlabel("Fear/Greed Index Classification (Day t)", fontsize=12)
+    plt.ylabel("Bitcoin Price Change % (Day t+1)", fontsize=12)
+
+    # Add a horizontal line at y=0 to show the boundary between positive and negative changes
+    plt.axhline(y=0, color='r', linestyle='--', alpha=0.5)
+
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
+
+    plt.tight_layout()
     
-    st.pyplot(fig1)
-    st.pyplot(fig2)
+    return plt
