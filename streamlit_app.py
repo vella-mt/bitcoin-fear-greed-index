@@ -7,7 +7,6 @@ import matplotlib.dates as mdates
 import yfinance as yf
 import numpy as np
 
-
 def getData(tailDays=0):
     # Fetch Fear and Greed Index data
     r = requests.get('https://api.alternative.me/fng/?limit=0')
