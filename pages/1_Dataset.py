@@ -5,7 +5,7 @@ from plots import *
 
 data = data_loader.getData()
 
-num_days = st.slider('Select Number of Past Days for Analysis', 1, len(data), 365, key="tail_slider")
+num_days = st.slider('Select Number of Past Days to Analyze', 1, len(data), 365, key="tail_slider")
 data = data.tail(num_days).reset_index(drop=True)
 
 st.dataframe(data, use_container_width=True)

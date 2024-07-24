@@ -5,7 +5,9 @@ from plots import *
 
 data = data_loader.getData()
 
-num_days = st.slider('Number of Days to Analyze', 30, len(data), 825)
+st.title("Fear Greed Index Strategy Creator")
+
+num_days = st.slider('Select Number of Past Days to Analyze', 30, len(data), 825)
 data = data.tail(num_days).reset_index(drop=True)
 
 buy_threshold = st.slider('Buy Below Index', 0, 100, 25)

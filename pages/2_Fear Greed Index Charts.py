@@ -5,7 +5,7 @@ from plots import *
 
 data = data_loader.getData()
 
-num_days = st.slider('Select Number of Past Days for Analysis', 1, len(data), 365)
+num_days = st.slider('Select Number of Past Days to Analyze', 1, len(data), 365)
 data = data.tail(num_days).reset_index(drop=True)
 
 st.pyplot(plot_btc_against_fgi(data))
