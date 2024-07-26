@@ -18,7 +18,7 @@ def process_data(dataset, window):
 
 def display_correlation(dataset):
     correlation = dataset['fear_greed_avg'].corr(dataset['close_change'])
-    st.write(f":black-background[**Pearson correlation coefficient**: `{correlation:.4f}`]")
+    st.write(f"**Pearson correlation coefficient**: `{correlation:.4f}`")
     st.write(":gray[A coefficient close to 1 or -1 indicates a strong correlation, while values close to 0 indicate a weak correlation.]")
     
 def fear_greed_vs_close_change_scatter(dataset, window):
