@@ -61,7 +61,8 @@ def fear_greed_box_plot(dataset, window):
                  title=f"{window}-day Close Price Change Distribution by Fear & Greed Classification")
     fig.update_xaxes(categoryorder="array", 
                      categoryarray=["Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"])
-
+    
+    fig.update_layout(showlegend=False)  # Add this line to remove the legend
     st.plotly_chart(fig, use_container_width=True)
     st.write(f":gray[This box plot shows how Bitcoin's {window}-day price changes are distributed for different Fear & Greed Index categories. The boxes represent the middle 50% of price changes, with the line inside each box showing the median.]")
 
