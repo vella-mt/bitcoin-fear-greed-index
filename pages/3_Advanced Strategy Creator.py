@@ -6,14 +6,19 @@ from libraries.data import *
 
 dataset = getData()
 
+# Date range selection
+st.header("Date Range Selection")
+date_range = st.date_input("Select Date Range", 
+                           [dataset['timestamp'].min().date(), dataset['timestamp'].max().date()],
+                           min_value=dataset['timestamp'].min().date(),
+                           max_value=dataset['timestamp'].max().date())
+
+if len(date_range) == 2:
+    start_date, end_date = pd.to_datetime(date_range)
+    dataset = dataset[(dataset['timestamp'] >= start_date) & (dataset['timestamp'] <= end_date)]
+
 # Title
 st.title("Advanced Strategy Creator")
-
-# Number of past days to analyze
-num_days = st.slider('Select Number of Past Days to Analyze', 1, len(dataset), 365)
-dataset = dataset.tail(num_days).reset_index(drop=True)
-
-addFeatures(dataset)
 
 # Features selection
 st.header("Strategy Configuration")
@@ -83,6 +88,7 @@ config = {
     'momentum_period': momentum_period,
 }
 
+addFeatures(dataset)
 addSignals(dataset, config)
 
 balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(dataset, initial_balance, trade_amount)
@@ -95,4 +101,6 @@ portfolio_df = pd.DataFrame({
     'Total Value': total_values
 })
 
-plot_portfolio_balance(dataset, portfolio_df)
+# Plot portfolio balance
+plot_portfolio(portfolio_df)
+plot_signals(dataset, buy_signals, sell_signals)

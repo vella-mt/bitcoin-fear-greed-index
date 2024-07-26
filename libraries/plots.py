@@ -40,14 +40,13 @@ def implement_strategy(data, initial_balance, trade_amount):
         buy_signal_count = count_signals(row, 'buy')
         sell_signal_count = count_signals(row, 'sell')
 
-        # total_signals = buy_signal_count + sell_signal_count
-        # buy_threshold = max(3, total_signals // 2 + 1)  # At least 3, or more than half of total signals
-
+        # TODO: fix logic to compare buy with sell signals
         buy_threshold = 1
+        sell_threshold = 1
 
         if buy_signal_count >= buy_threshold and balance > 0:
             place_buy_order(row)
-        elif sell_signal_count > buy_signal_count and sell_signal_count >= 3 and btc_held > 0:
+        elif sell_signal_count > buy_signal_count and sell_signal_count >= sell_threshold and btc_held > 0:
             place_sell_order(row)
         
         btc_value = btc_held * row['close']
@@ -63,29 +62,32 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-def plot_portfolio_balance(dataset, portfolio_df):
-    
-    st.header("Portfolio Performance")
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+
+import streamlit as st
+import plotly.graph_objects as go
+import pandas as pd
+
+def plot_portfolio(portfolio_df):
+    st.header("Portfolio and Bitcoin Analysis")
 
     # Ensure 'Date' column is in datetime format
     portfolio_df['Date'] = pd.to_datetime(portfolio_df['Date'])
 
-    # Create a line plot for portfolio composition
-    fig = go.Figure()
+    # Set 'Date' as the index
+    portfolio_df.set_index('Date', inplace=True)
 
-    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['USD Balance'],
-                             mode='lines', name='USD Balance'))
-    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['BTC Value'],
-                             mode='lines', name='BTC Value'))
-    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['Total Value'],
-                             mode='lines', name='Total Value'))
+    # Create a new dataframe for the stacked area chart
+    chart_df = portfolio_df[['USD Balance', 'BTC Value']]
 
-    fig.update_layout(title='Portfolio Composition Over Time',
-                      xaxis_title='Date',
-                      yaxis_title='Value (USD)',
-                      legend_title='Asset')
+    # Plot portfolio balance
+    st.subheader("Portfolio Performance")
+    st.area_chart(chart_df, color=["#FE9F0D", "#119323"], height=500)
 
-    st.plotly_chart(fig)
+    # Reset index for further operations if needed
+    portfolio_df.reset_index(inplace=True)
 
     # Calculate and display performance metrics
     initial_value = portfolio_df['Total Value'].iloc[0]
@@ -94,36 +96,50 @@ def plot_portfolio_balance(dataset, portfolio_df):
 
     st.metric("Total Return", f"{total_return:.2f}%")
 
-    # Allow users to select a specific date range
-    date_range = st.date_input("Select Date Range", 
-                               [portfolio_df['Date'].min().date(), portfolio_df['Date'].max().date()],
-                               min_value=portfolio_df['Date'].min().date(),
-                               max_value=portfolio_df['Date'].max().date())
 
-    if len(date_range) == 2:
-        start_date, end_date = pd.to_datetime(date_range)
-        filtered_df = portfolio_df[(portfolio_df['Date'] >= start_date) & (portfolio_df['Date'] <= end_date)]
+def plot_signals(dataset, buy_signals, sell_signals):
+    # Plot Bitcoin price with signals
+    st.subheader("Bitcoin Price with Buy/Sell Signals")
+    fig_bitcoin = go.Figure()
 
-        # Create a line plot for the selected date range
-        fig = go.Figure()
+    # Add Bitcoin price line
+    fig_bitcoin.add_trace(go.Scatter(
+        x=dataset['timestamp'],
+        y=dataset['close'],
+        mode='lines',
+        name='Bitcoin Price'
+    ))
 
-        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['USD Balance'],
-                                 mode='lines', name='USD Balance'))
-        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['BTC Value'],
-                                 mode='lines', name='BTC Value'))
-        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['Total Value'],
-                                 mode='lines', name='Total Value'))
+    # Add buy signals
+    fig_bitcoin.add_trace(go.Scatter(
+        x=dataset['timestamp'][buy_signals],
+        y=dataset['close'][buy_signals],
+        mode='markers',
+        marker=dict(symbol='triangle-up', size=10, color='green'),
+        name='Buy Signal'
+    ))
 
-        fig.update_layout(title=f'Portfolio Composition ({start_date.date()} to {end_date.date()})',
-                          xaxis_title='Date',
-                          yaxis_title='Value (USD)',
-                          legend_title='Asset')
+    # Add sell signals
+    fig_bitcoin.add_trace(go.Scatter(
+        x=dataset['timestamp'][sell_signals],
+        y=dataset['close'][sell_signals],
+        mode='markers',
+        marker=dict(symbol='triangle-down', size=10, color='red'),
+        name='Sell Signal'
+    ))
 
-        st.plotly_chart(fig)
+    fig_bitcoin.update_layout(
+        title=f'Bitcoin Price with Buy/Sell Signals',
+        xaxis_title='Date',
+        yaxis_title='Price (USD)',
+        legend_title='Legend',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
 
-        # Calculate and display performance metrics for the selected range
-        range_initial_value = filtered_df['Total Value'].iloc[0]
-        range_final_value = filtered_df['Total Value'].iloc[-1]
-        range_return = (range_final_value - range_initial_value) / range_initial_value * 100
-
-        st.metric("Return for Selected Range", f"{range_return:.2f}%")
+    st.plotly_chart(fig_bitcoin)
