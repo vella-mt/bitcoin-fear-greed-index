@@ -61,14 +61,13 @@ def fear_greed_box_plot(dataset, window):
                  title=f"{window}-day Close Price Change Distribution by Fear & Greed Classification")
     fig.update_xaxes(categoryorder="array", 
                      categoryarray=["Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"])
-    fig.update_layout(legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5))
 
     st.plotly_chart(fig, use_container_width=True)
     st.write(f":gray[This box plot shows how Bitcoin's {window}-day price changes are distributed for different Fear & Greed Index categories. The boxes represent the middle 50% of price changes, with the line inside each box showing the median.]")
 
 def rolling_correlation_plot(dataset, window):
     st.subheader(f"Rolling Correlation")
-    rolling_window = st.slider("Select rolling correlation window (periods)", 3, 365, 60)
+    rolling_window = st.slider("Select rolling correlation window (periods)", 3, 365, 30)
     
     dataset['rolling_corr'] = dataset['fear_greed_avg'].rolling(window=rolling_window).corr(dataset['close_change'])
     
