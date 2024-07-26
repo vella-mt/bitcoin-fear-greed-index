@@ -58,17 +58,6 @@ def implement_strategy(data, initial_balance, trade_amount):
 
     return balances, btc_values, total_values, buy_signals, sell_signals
     
-import pandas as pd
-import plotly.graph_objects as go
-import streamlit as st
-
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
-
-import streamlit as st
-import plotly.graph_objects as go
-import pandas as pd
 
 def plot_portfolio(portfolio_df):
     st.header("Portfolio and Bitcoin Analysis")
