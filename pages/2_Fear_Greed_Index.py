@@ -40,7 +40,7 @@ def fear_greed_vs_close_change_scatter(dataset, window):
     
     fig.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="No Change")
     fig.update_yaxes(range=[-max(abs(dataset['close_change'])), max(abs(dataset['close_change']))])
-    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="right", x=1))
 
     st.plotly_chart(fig, use_container_width=True)
     st.write(f":gray[This scatter plot compares the {window}-day average Fear & Greed Index with the {window}-day Bitcoin price change. Each dot represents a {window}-day period.]")
@@ -61,7 +61,7 @@ def fear_greed_box_plot(dataset, window):
                  title=f"{window}-day Close Price Change Distribution by Fear & Greed Classification")
     fig.update_xaxes(categoryorder="array", 
                      categoryarray=["Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"])
-    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="right", x=1))
 
     st.plotly_chart(fig, use_container_width=True)
     st.write(f":gray[This box plot shows how Bitcoin's {window}-day price changes are distributed for different Fear & Greed Index categories. The boxes represent the middle 50% of price changes, with the line inside each box showing the median.]")
@@ -79,7 +79,7 @@ def rolling_correlation_plot(dataset, window):
     fig.add_hline(y=0.3, line_dash="dash", line_color="red", annotation_text="Weak Positive Correlation")
     fig.add_hline(y=-0.3, line_dash="dash", line_color="red", annotation_text="Weak Negative Correlation")
     fig.update_yaxes(range=[-1, 1])
-    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="right", x=1))
 
     
     st.plotly_chart(fig, use_container_width=True)
