@@ -8,24 +8,23 @@ def getData(tailDays=0):
     r = requests.get('https://api.alternative.me/fng/?limit=0')
     df = pd.DataFrame(r.json()['data'])
     df['value'] = df['value'].astype(int)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-    df.set_index('timestamp', inplace=True)
-    df.rename(columns={'value': 'fear_greed'}, inplace=True)
-    df.drop(['time_until_update'], axis=1, inplace=True)
+    df['timestamp'] = pd.to_datetime(df['timestamp'].astype(int), unit='s')
+    df = df.set_index('timestamp')
+    df = df.rename(columns={'value': 'fear_greed'})
+    df = df.drop(['time_until_update'], axis=1)
 
     # Fetch Bitcoin data history
-    df1 = yf.download('BTC-USD', interval='1d')[['Close']]
-    df1.rename(columns={'Close': 'close'}, inplace=True)
+    df1 = yf.download('BTC-USD', interval='1d')[['Close']].copy()
+    df1 = df1.rename(columns={'Close': 'close'})
     df1.index.name = 'timestamp'
-    df1['timestamp'] = df1.index
-    df1.reset_index(drop=True, inplace=True)
+    df1 = df1.reset_index()
     df1['timestamp'] = pd.to_datetime(df1['timestamp']).dt.tz_localize(None)
-    df1.set_index('timestamp', inplace=True)
+    df1 = df1.set_index('timestamp')
 
     # Merge the two dataframes
     data = df.merge(df1, on='timestamp')
-    data.sort_index(inplace=True)
-    data.reset_index(inplace=True)
+    data = data.sort_index()
+    data = data.reset_index()
 
     if tailDays > 0:
         data = data.tail(tailDays).reset_index(drop=True)

@@ -1,31 +1,54 @@
+import streamlit as st
+import plotly.graph_objects as go
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import numpy as np
-import seaborn as sns
-
 
 # Define the strategy implementation function
-def implement_strategy(data, buy_threshold, sell_threshold, initial_balance, trade_amount):
+def implement_strategy(data, initial_balance, trade_amount):
     balance = initial_balance
     btc_held = 0
-    balances = [balance]
-    btc_values = [0]
-    total_values = [balance]
+    balances = []
+    btc_values = []
+    total_values = []
     buy_signals = []
     sell_signals = []
 
+    def place_buy_order(row):
+        nonlocal balance, btc_held
+        btc_to_buy = min(trade_amount, balance) / row['close']
+        btc_held += btc_to_buy
+        balance -= min(trade_amount, balance)
+        buy_signals.append(row.name)
+
+    def place_sell_order(row):
+        nonlocal balance, btc_held
+        btc_to_sell = min(trade_amount / row['close'], btc_held)
+        balance += btc_to_sell * row['close']
+        btc_held -= btc_to_sell
+        sell_signals.append(row.name)
+
+    def count_signals(row, signal_type):
+        signal_columns = [
+            f'ma_{signal_type}_signal',
+            f'fear_greed_{signal_type}_signal',
+            f'rsi_{signal_type}_signal',
+            f'bollinger_{signal_type}_signal',
+            f'momentum_{signal_type}_signal'
+        ]
+        return sum(row.get(col, False) for col in signal_columns if col in row.index)
+
     for i, row in data.iterrows():
-        if row['fear_greed'] <= buy_threshold and balance > 0:
-            btc_to_buy = min(trade_amount, balance) / row['close']
-            btc_held += btc_to_buy
-            balance -= min(trade_amount, balance)
-            buy_signals.append(i)
-        elif row['fear_greed'] >= sell_threshold and btc_held > 0:
-            btc_to_sell = min(trade_amount / row['close'], btc_held)
-            balance += btc_to_sell * row['close']
-            btc_held -= btc_to_sell
-            sell_signals.append(i)
+        buy_signal_count = count_signals(row, 'buy')
+        sell_signal_count = count_signals(row, 'sell')
+
+        # total_signals = buy_signal_count + sell_signal_count
+        # buy_threshold = max(3, total_signals // 2 + 1)  # At least 3, or more than half of total signals
+
+        buy_threshold = 1
+
+        if buy_signal_count >= buy_threshold and balance > 0:
+            place_buy_order(row)
+        elif sell_signal_count > buy_signal_count and sell_signal_count >= 3 and btc_held > 0:
+            place_sell_order(row)
         
         btc_value = btc_held * row['close']
         total_value = balance + btc_value
@@ -35,118 +58,72 @@ def implement_strategy(data, buy_threshold, sell_threshold, initial_balance, tra
         total_values.append(total_value)
 
     return balances, btc_values, total_values, buy_signals, sell_signals
-
-# Define the plotting function
-def plot_strategy(data, balances, btc_values, total_values, buy_signals, sell_signals):
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 16), sharex=True)
     
-    ax1.plot(data['timestamp'], data['close'], label='Bitcoin Price', color='black', linewidth=2)
-    ax1.scatter(data.loc[buy_signals, 'timestamp'], data.loc[buy_signals, 'close'], marker='^', color='green', s=100, label='Buy Signal')
-    ax1.scatter(data.loc[sell_signals, 'timestamp'], data.loc[sell_signals, 'close'], marker='v', color='red', s=100, label='Sell Signal')
-    ax1.set_ylabel('Bitcoin Price (USD)')
-    ax1.set_title('Bitcoin Price with Buy/Sell Signals')
-    ax1.legend(loc='upper left')
-    ax1.grid(True, linestyle='--', alpha=0.5)
-    ax1.set_yscale('log')
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
-    ax2.fill_between(data['timestamp'], balances[1:], color='green', alpha=0.6, label='Cash Balance')
-    ax2.fill_between(data['timestamp'], balances[1:], total_values[1:], color='orange', alpha=0.6, label='BTC Balance')
-    ax2.scatter(data.loc[buy_signals, 'timestamp'], [total_values[i+1] for i in buy_signals], marker='o', color='green', s=50, label='Buy')
-    ax2.scatter(data.loc[sell_signals, 'timestamp'], [total_values[i+1] for i in sell_signals], marker='o', color='red', s=50, label='Sell')
-    ax2.set_ylabel('Balance (USD)')
-    ax2.set_title('Portfolio Composition Over Time')
-    ax2.legend(loc='upper left')
-    ax2.grid(True, linestyle='--', alpha=0.5)
-
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax2.xaxis.set_major_locator(mdates.AutoDateLocator())
-    fig.autofmt_xdate()
-
-    initial_value = total_values[0]
-    final_value = total_values[-1]
-    roi = (final_value - initial_value) / initial_value * 100
-    buy_hold_final_value = (initial_value / data['close'].iloc[0]) * data['close'].iloc[-1]
-    buy_hold_roi = (buy_hold_final_value - initial_value) / initial_value * 100
+def plot_portfolio_balance(dataset, portfolio_df):
     
-    roi_text = f'Strategy ROI: {roi:.2f}%\nBuy & Hold ROI: {buy_hold_roi:.2f}%'
-    plt.figtext(0.01, 0.01, roi_text, fontsize=12, ha='left')
+    st.header("Portfolio Performance")
 
-    ax2.annotate(f'Final Portfolio Value: ${final_value:,.2f}', 
-                 xy=(data['timestamp'].iloc[-1], final_value),
-                 xytext=(30, 30), textcoords='offset points',
-                 bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
-                 arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+    # Ensure 'Date' column is in datetime format
+    portfolio_df['Date'] = pd.to_datetime(portfolio_df['Date'])
 
-    plt.tight_layout()
-    plt.subplots_adjust(bottom=0.1)  # Adjust bottom spacing to remove white space
+    # Create a line plot for portfolio composition
+    fig = go.Figure()
 
-    return fig
+    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['USD Balance'],
+                             mode='lines', name='USD Balance'))
+    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['BTC Value'],
+                             mode='lines', name='BTC Value'))
+    fig.add_trace(go.Scatter(x=portfolio_df['Date'], y=portfolio_df['Total Value'],
+                             mode='lines', name='Total Value'))
 
-def plot_buy_and_hold_comparison(data, balances, btc_values, total_values, buy_signals, sell_signals):
-    fig, ax = plt.subplots(figsize=(12, 8))
+    fig.update_layout(title='Portfolio Composition Over Time',
+                      xaxis_title='Date',
+                      yaxis_title='Value (USD)',
+                      legend_title='Asset')
 
-    # Calculate the performance of a buy-and-hold strategy
-    initial_btc = total_values[0] / data['close'].iloc[0]
-    buy_hold_values = data['close'] * initial_btc
+    st.plotly_chart(fig)
 
-    # Plot Bitcoin price
-    ax.plot(data['timestamp'], data['close'], label='Bitcoin Price', color='black', linewidth=2)
+    # Calculate and display performance metrics
+    initial_value = portfolio_df['Total Value'].iloc[0]
+    final_value = portfolio_df['Total Value'].iloc[-1]
+    total_return = (final_value - initial_value) / initial_value * 100
 
-    # Plot total portfolio value
-    ax.plot(data['timestamp'], total_values[1:], label='Portfolio Value', color='blue', linewidth=2)
+    st.metric("Total Return", f"{total_return:.2f}%")
 
-    # Plot buy-and-hold strategy
-    ax.plot(data['timestamp'], buy_hold_values, label='Buy & Hold Value', color='gray', linestyle='--', linewidth=2)
+    # Allow users to select a specific date range
+    date_range = st.date_input("Select Date Range", 
+                               [portfolio_df['Date'].min().date(), portfolio_df['Date'].max().date()],
+                               min_value=portfolio_df['Date'].min().date(),
+                               max_value=portfolio_df['Date'].max().date())
 
-    # Fill the area between portfolio value and buy-and-hold strategy
-    ax.fill_between(data['timestamp'], buy_hold_values, total_values[1:], 
-                    where=(np.array(total_values[1:]) > buy_hold_values), 
-                    color='green', alpha=0.3, label='Outperforming Buy & Hold')
-    ax.fill_between(data['timestamp'], buy_hold_values, total_values[1:], 
-                    where=(np.array(total_values[1:]) <= buy_hold_values), 
-                    color='red', alpha=0.3, label='Underperforming Buy & Hold')
+    if len(date_range) == 2:
+        start_date, end_date = pd.to_datetime(date_range)
+        filtered_df = portfolio_df[(portfolio_df['Date'] >= start_date) & (portfolio_df['Date'] <= end_date)]
 
-    # Mark buy signals
-    ax.scatter(data.iloc[buy_signals]['timestamp'], data.iloc[buy_signals]['close'], marker='^', color='green', s=100, 
-               label='Buy Signal', edgecolor='black', zorder=5)
+        # Create a line plot for the selected date range
+        fig = go.Figure()
 
-    # Mark sell signals
-    ax.scatter(data.iloc[sell_signals]['timestamp'], data.iloc[sell_signals]['close'], marker='v', color='red', s=100, 
-               label='Sell Signal', edgecolor='black', zorder=5)
+        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['USD Balance'],
+                                 mode='lines', name='USD Balance'))
+        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['BTC Value'],
+                                 mode='lines', name='BTC Value'))
+        fig.add_trace(go.Scatter(x=filtered_df['Date'], y=filtered_df['Total Value'],
+                                 mode='lines', name='Total Value'))
 
-    # Customize the y-axis
-    ax.set_ylabel('Value (USD)', fontsize=12)
-    ax.tick_params(axis='y', labelsize=10)
-    ax.set_yscale('log')  # Use log scale for better visibility of relative changes
+        fig.update_layout(title=f'Portfolio Composition ({start_date.date()} to {end_date.date()})',
+                          xaxis_title='Date',
+                          yaxis_title='Value (USD)',
+                          legend_title='Asset')
 
-    # Customize x-axis
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-    fig.autofmt_xdate()
+        st.plotly_chart(fig)
 
-    # Add a legend
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=10)
+        # Calculate and display performance metrics for the selected range
+        range_initial_value = filtered_df['Total Value'].iloc[0]
+        range_final_value = filtered_df['Total Value'].iloc[-1]
+        range_return = (range_final_value - range_initial_value) / range_initial_value * 100
 
-    # Add grid lines
-    ax.grid(True, linestyle='--', alpha=0.5)
-
-    # Set the title
-    plt.title('Trading Strategy Performance vs Buy & Hold', fontsize=16)
-
-    # Annotate the final portfolio value
-    final_value = total_values[-1]
-    ax.annotate(f'Final Portfolio Value: ${final_value:,.2f}', 
-                xy=(data['timestamp'].iloc[-1], final_value),
-                xytext=(30, 30), textcoords='offset points',
-                bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
-                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
-
-    # Calculate and display ROI and comparison to buy-and-hold
-    initial_value = total_values[0]
-    roi = (final_value - initial_value) / initial_value * 100
-    buy_hold_roi = (buy_hold_values.iloc[-1] - initial_value) / initial_value * 100
-    plt.figtext(-0.02, -0.02, f'Strategy ROI: {roi:.2f}%\nBuy & Hold ROI: {buy_hold_roi:.2f}%', fontsize=12, ha='left')
-
-    # Adjust layout and show plot
-    plt.tight_layout()
-    return fig
+        st.metric("Return for Selected Range", f"{range_return:.2f}%")

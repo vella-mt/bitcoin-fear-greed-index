@@ -1,4 +1,7 @@
 import streamlit as st
+from libraries.plots import *
+import pandas as pd
+import plotly.graph_objects as go
 from libraries.data import *
 
 dataset = getData()
@@ -7,7 +10,7 @@ dataset = getData()
 st.title("Advanced Strategy Creator")
 
 # Number of past days to analyze
-num_days = st.slider('Select Number of Past Days to Analyze', min_value=1, max_value=None, value=365)
+num_days = st.slider('Select Number of Past Days to Analyze', 1, len(dataset), 365)
 dataset = dataset.tail(num_days).reset_index(drop=True)
 
 addFeatures(dataset)
@@ -80,9 +83,16 @@ config = {
     'momentum_period': momentum_period,
 }
 
-st.dataframe(dataset, use_container_width=True)
+addSignals(dataset, config)
 
-if st.button("Add Features to Dataset"):
-    addSignals(dataset, config)
+balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(dataset, initial_balance, trade_amount)
+    
+# Create a DataFrame with the portfolio composition
+portfolio_df = pd.DataFrame({
+    'Date': dataset['timestamp'],
+    'USD Balance': balances,
+    'BTC Value': btc_values,
+    'Total Value': total_values
+})
 
-    st.dataframe(dataset, use_container_width=True)
+plot_portfolio_balance(dataset, portfolio_df)
