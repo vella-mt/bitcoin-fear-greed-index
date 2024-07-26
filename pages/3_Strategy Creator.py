@@ -6,6 +6,8 @@ from libraries.data import *
 
 dataset = getData()
 
+st.title("Strategy Creator (Work in Progress)")
+
 # Date range selection
 st.header("Date Range Selection")
 date_range = st.date_input("Select Date Range", 
@@ -16,9 +18,6 @@ date_range = st.date_input("Select Date Range",
 if len(date_range) == 2:
     start_date, end_date = pd.to_datetime(date_range)
     dataset = dataset[(dataset['timestamp'] >= start_date) & (dataset['timestamp'] <= end_date)]
-
-# Title
-st.title("Advanced Strategy Creator")
 
 # Features selection
 st.header("Strategy Configuration")
@@ -53,7 +52,7 @@ momentum_enabled = st.checkbox('Enable Simple Momentum Strategy')
 momentum_period = st.number_input('Momentum Period (days)', min_value=1, max_value=None, value=14, disabled=not momentum_enabled)
 
 # Stop-Loss and Take-Profit Rules
-st.header("Stop-Loss and Take-Profit Rules")
+st.header("Stop-Loss and Take-Profit Rules (not implemented yet)")
 st.write("**Stop-Loss:** Automatically sell if the price falls below the set percentage of the purchase price.")
 st.write("**Take-Profit:** Automatically sell if the price rises above the set percentage of the purchase price.")
 stop_loss_enabled = st.checkbox('Enable Stop-Loss')
@@ -63,7 +62,7 @@ take_profit_enabled = st.checkbox('Enable Take-Profit')
 take_profit_percentage = st.number_input('Take-Profit Percentage', min_value=0.0, max_value=100.0, value=10.0, step=0.1, disabled=not take_profit_enabled)
 
 # Time-Based Rules
-st.header("Time-Based Rules")
+st.header("Time-Based Rules (not implemented yet)")
 st.write("**Dollar-Cost Averaging:** Invest a fixed amount at regular intervals, regardless of price.")
 dollar_cost_avg_enabled = st.checkbox('Enable Dollar-Cost Averaging')
 dollar_cost_avg_period = st.selectbox('Select Period', ['Daily', 'Weekly', 'Monthly'], disabled=not dollar_cost_avg_enabled)
