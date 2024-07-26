@@ -14,3 +14,13 @@ def calculate_bollinger_bands(data, window, num_std_dev):
     upper_band = rolling_mean + (rolling_std * num_std_dev)
     lower_band = rolling_mean - (rolling_std * num_std_dev)
     return rolling_mean, upper_band, lower_band
+
+def calculate_momentum(data, period):
+    return data['close'].pct_change(periods=period)
+
+def calculate_vwap(data, period):
+    data['volume_price'] = data['close'] * data['volume']
+    data['cumulative_volume'] = data['volume'].rolling(window=period).sum()
+    data['cumulative_volume_price'] = data['volume_price'].rolling(window=period).sum()
+    vwap = data['cumulative_volume_price'] / data['cumulative_volume']
+    return vwap
