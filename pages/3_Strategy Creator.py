@@ -103,3 +103,4 @@ portfolio_df = pd.DataFrame({
 # Plot portfolio balance
 plot_portfolio(portfolio_df)
 plot_signals(dataset, buy_signals, sell_signals)
+plot_strategy_signals(dataset)
