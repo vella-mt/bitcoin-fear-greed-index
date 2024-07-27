@@ -52,14 +52,14 @@ momentum_enabled = st.checkbox('Enable Simple Momentum Strategy')
 momentum_period = st.number_input('Momentum Period (days)', min_value=1, max_value=None, value=14, disabled=not momentum_enabled)
 
 # Stop-Loss and Take-Profit Rules
-st.header("Stop-Loss and Take-Profit Rules (not implemented yet)")
+st.header("Stop-Loss and Take-Profit Rules")
 st.write("**Stop-Loss:** Automatically sell if the price falls below the set percentage of the purchase price.")
 st.write("**Take-Profit:** Automatically sell if the price rises above the set percentage of the purchase price.")
 stop_loss_enabled = st.checkbox('Enable Stop-Loss')
-stop_loss_percentage = st.number_input('Stop-Loss Percentage', min_value=0.0, max_value=100.0, value=5.0, step=0.1, disabled=not stop_loss_enabled)
+stop_loss_percentage = st.number_input('Stop-Loss Percentage', min_value=0.0, max_value=100.0, value=5.0, step=1.0, disabled=not stop_loss_enabled)
 
 take_profit_enabled = st.checkbox('Enable Take-Profit')
-take_profit_percentage = st.number_input('Take-Profit Percentage', min_value=0.0, max_value=100.0, value=10.0, step=0.1, disabled=not take_profit_enabled)
+take_profit_percentage = st.number_input('Take-Profit Percentage', min_value=0.0, max_value=100.0, value=10.0, step=1.0, disabled=not take_profit_enabled)
 
 # Time-Based Rules
 st.header("Time-Based Rules (not implemented yet)")
@@ -67,8 +67,8 @@ st.write("**Dollar-Cost Averaging:** Invest a fixed amount at regular intervals,
 dollar_cost_avg_enabled = st.checkbox('Enable Dollar-Cost Averaging')
 dollar_cost_avg_period = st.selectbox('Select Period', ['Daily', 'Weekly', 'Monthly'], disabled=not dollar_cost_avg_enabled)
 
-initial_balance = st.number_input('Start Balance (USD)', value=1000, step=1000)
-trade_amount = st.number_input('Trade Amount (USD)', value=10, step=50)
+initial_balance = st.number_input('Start Balance (USD)', min_value=0, value=1000, step=1000)
+trade_amount = st.number_input('Trade Amount (USD)', min_value=0,value=10, step=50)
 
 config = {
     'moving_avg_enabled': moving_avg_enabled,
@@ -85,12 +85,20 @@ config = {
     'bollinger_std_dev_multiplier': bollinger_std_dev_multiplier,
     'momentum_enabled': momentum_enabled,
     'momentum_period': momentum_period,
+    'stop_loss_enabled': stop_loss_enabled,
+    'stop_loss_percentage': stop_loss_percentage,
+    'take_profit_enabled': take_profit_enabled,
+    'take_profit_percentage': take_profit_percentage,
+    'dollar_cost_avg_enabled': dollar_cost_avg_enabled,
+    'dollar_cost_avg_period': dollar_cost_avg_period,
+    'initial_balance': initial_balance,
+    'trade_amount': trade_amount
 }
 
 addFeatures(dataset)
 addSignals(dataset, config)
 
-balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(dataset, initial_balance, trade_amount)
+balances, btc_values, total_values, buy_signals, sell_signals = implement_strategy(dataset, config)
     
 # Create a DataFrame with the portfolio composition
 portfolio_df = pd.DataFrame({

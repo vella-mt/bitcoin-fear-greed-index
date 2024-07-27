@@ -14,8 +14,8 @@ def count_signals(row, signal_type):
         ]
         return sum(row.get(col, False) for col in signal_columns if col in row.index)
 
-def implement_strategy(data, initial_balance, trade_amount):
-    balance = initial_balance
+def implement_strategy(data, config):    
+    balance = config['initial_balance']
     btc_held = 0
     balances = []
     btc_values = []
@@ -23,19 +23,30 @@ def implement_strategy(data, initial_balance, trade_amount):
     buy_signals = []
     sell_signals = []
 
+    trade_amount = config['trade_amount']
+    stop_loss_enabled = config['stop_loss_enabled']
+    stop_loss_percentage = config['stop_loss_percentage'] / 100
+    take_profit_enabled = config['take_profit_enabled']
+    take_profit_percentage = config['take_profit_percentage'] / 100
+
+    last_buy_price = None
+
     def place_buy_order(row):
-        nonlocal balance, btc_held
+        nonlocal balance, btc_held, last_buy_price
         btc_to_buy = min(trade_amount, balance) / row['close']
         btc_held += btc_to_buy
         balance -= min(trade_amount, balance)
         buy_signals.append(row.name)
+        last_buy_price = row['close']
 
     def place_sell_order(row):
-        nonlocal balance, btc_held
+        nonlocal balance, btc_held, last_buy_price
         btc_to_sell = min(trade_amount / row['close'], btc_held)
         balance += btc_to_sell * row['close']
         btc_held -= btc_to_sell
         sell_signals.append(row.name)
+        if btc_held == 0:
+            last_buy_price = None
 
     for i, row in data.iterrows():
         buy_signal_count = count_signals(row, 'buy')
@@ -45,7 +56,22 @@ def implement_strategy(data, initial_balance, trade_amount):
         buy_threshold = 0
         sell_threshold = 0
 
-        if buy_signal_count > sell_signal_count and buy_signal_count >= buy_threshold and balance > 0:
+        # print(f"Stop loss enabled: {stop_loss_enabled}")
+        # print(f"Take profit enabled: {take_profit_enabled}")
+        # print(f"Last buy price: {last_buy_price}")
+
+        # Check for stop-loss and take-profit
+        if stop_loss_enabled and last_buy_price is not None:
+            if row['close'] <= last_buy_price * (1 - stop_loss_percentage):
+                print("STOP LOSS ORDER")
+                place_sell_order(row)
+
+        elif take_profit_enabled and last_buy_price is not None:
+            if row['close'] >= last_buy_price * (1 + take_profit_percentage):
+                print("TAKE PROFIT ORDER")
+                place_sell_order(row)
+
+        elif buy_signal_count > sell_signal_count and buy_signal_count >= buy_threshold and balance > 0:
             place_buy_order(row)
         elif sell_signal_count > buy_signal_count and sell_signal_count >= sell_threshold and btc_held > 0:
             place_sell_order(row)
