@@ -2,7 +2,9 @@ import requests
 import pandas as pd
 import yfinance as yf
 from libraries.trading import *
+import streamlit as st
 
+@st.cache_data(ttl="1d")
 def getData(tailDays=0):
     # Fetch Fear and Greed Index data
     r = requests.get('https://api.alternative.me/fng/?limit=0')
