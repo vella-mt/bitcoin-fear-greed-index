@@ -63,12 +63,10 @@ def implement_strategy(data, config):
         # Check for stop-loss and take-profit
         if stop_loss_enabled and last_buy_price is not None:
             if row['close'] <= last_buy_price * (1 - stop_loss_percentage):
-                print("STOP LOSS ORDER")
                 place_sell_order(row)
 
         elif take_profit_enabled and last_buy_price is not None:
             if row['close'] >= last_buy_price * (1 + take_profit_percentage):
-                print("TAKE PROFIT ORDER")
                 place_sell_order(row)
 
         elif buy_signal_count > sell_signal_count and buy_signal_count >= buy_threshold and balance > 0:
