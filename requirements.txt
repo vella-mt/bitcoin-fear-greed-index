@@ -6,4 +6,3 @@ seaborn
 yfinance
 numpy
 plotly
-json
