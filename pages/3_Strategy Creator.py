@@ -5,13 +5,18 @@ import plotly.graph_objects as go
 from libraries.data import *
 import json
 
+st.set_page_config(
+    initial_sidebar_state= "expanded"
+)
+
 dataset = getData()
 
 st.title("Strategy Creator (Work in Progress)")
 
+# should be in sidebar but moved due to bug in mobile where sidebar closes whenever date is adjusted
 # Date range selection
-st.sidebar.header("Date Range Selection")
-date_range = st.sidebar.date_input("Select Date Range",
+st.header("Date Range Selection")
+date_range = st.date_input("Select Date Range",
                            [dataset['timestamp'].min().date(), dataset['timestamp'].max().date()],
                            min_value=dataset['timestamp'].min().date(),
                            max_value=dataset['timestamp'].max().date())
