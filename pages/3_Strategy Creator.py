@@ -51,6 +51,8 @@ default_config = {
     'bollinger_std_dev_multiplier': 2.0,
     'momentum_enabled': False,
     'momentum_period': 14,
+    'buy_threshold': 1,
+    'sell_threshold': 1,
     'stop_loss_enabled': False,
     'stop_loss_percentage': 5.0,
     'take_profit_enabled': False,
@@ -58,7 +60,7 @@ default_config = {
     'dollar_cost_avg_enabled': False,
     'dollar_cost_avg_period': 'Daily',
     'initial_balance': 1000,
-    'trade_amount': 10
+    'trade_amount': 50
 }
 
 # Load configuration from file if uploaded
@@ -104,6 +106,22 @@ st.sidebar.markdown("**Simple Momentum**", help="Measures how much the price has
 momentum_enabled = st.sidebar.checkbox('Enable Simple Momentum Strategy', value=config['momentum_enabled'])
 momentum_period = st.sidebar.number_input('Momentum Period (days)', min_value=1, max_value=None, value=config['momentum_period'], disabled=not momentum_enabled)
 
+# Buy and Sell Thresholds
+enabled_indicators = sum([ # count enabled indicators
+    fear_greed_enabled,
+    moving_avg_enabled,
+    rsi_enabled,
+    bollinger_enabled,
+    momentum_enabled
+])
+
+# Buy and Sell Thresholds
+help_tooltip = '''Set the minimum number of signals needed to initiate a buy or sell action. Stop-Loss and Take-Profit rules override this setting.\n
+Note: The buy and sell thresholds only apply when their respective signal is stronger. Signal strength is calculated by dividing the signal count by its respective threshold.'''
+st.sidebar.markdown("**Signal Thresholds**", help=help_tooltip)
+buy_threshold = st.sidebar.slider("Number of Signals to Buy", min_value=1, max_value=max(2, enabled_indicators), value=config.get('buy_threshold', 1), help="Select the minimum number of signals needed to initiate a buy action.", disabled=(enabled_indicators < 1))
+sell_threshold = st.sidebar.slider("Number of Signals to Sell", min_value=1, max_value=max(2, enabled_indicators), value=config.get('sell_threshold', 1), help="Select the minimum number of signals needed to initiate a sell action.", disabled=(enabled_indicators < 1))
+
 # Stop-Loss and Take-Profit Rules
 st.sidebar.header("Stop-Loss and Take-Profit Rules")
 st.sidebar.markdown("**Stop-Loss**", help="Automatically sell if the price falls below the set percentage of the purchase price.")
@@ -139,6 +157,8 @@ config = {
     'bollinger_std_dev_multiplier': bollinger_std_dev_multiplier,
     'momentum_enabled': momentum_enabled,
     'momentum_period': momentum_period,
+    'buy_threshold': buy_threshold,
+    'sell_threshold': sell_threshold,
     'stop_loss_enabled': stop_loss_enabled,
     'stop_loss_percentage': stop_loss_percentage,
     'take_profit_enabled': take_profit_enabled,

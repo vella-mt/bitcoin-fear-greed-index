@@ -52,13 +52,11 @@ def implement_strategy(data, config):
         buy_signal_count = count_signals(row, 'buy')
         sell_signal_count = count_signals(row, 'sell')
 
-        # TODO: fix logic to compare buy with sell signals
-        buy_threshold = 0
-        sell_threshold = 0
+        buy_threshold = config['buy_threshold']
+        sell_threshold = config['sell_threshold']
 
-        # print(f"Stop loss enabled: {stop_loss_enabled}")
-        # print(f"Take profit enabled: {take_profit_enabled}")
-        # print(f"Last buy price: {last_buy_price}")
+        buy_signal_strength = buy_signal_count / buy_threshold if buy_threshold > 0 else 0
+        sell_signal_strength = sell_signal_count / sell_threshold if sell_threshold > 0 else 0
 
         # Check for stop-loss and take-profit
         if stop_loss_enabled and last_buy_price is not None:
@@ -69,7 +67,7 @@ def implement_strategy(data, config):
             if row['close'] >= last_buy_price * (1 + take_profit_percentage):
                 place_sell_order(row)
 
-        elif buy_signal_count > sell_signal_count and buy_signal_count >= buy_threshold and balance > 0:
+        elif buy_signal_strength > sell_signal_strength and buy_signal_count >= buy_threshold and balance > 0:
             place_buy_order(row)
         elif sell_signal_count > buy_signal_count and sell_signal_count >= sell_threshold and btc_held > 0:
             place_sell_order(row)
